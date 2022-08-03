@@ -1,0 +1,168 @@
+/* Question 1 Query */
+
+WITH t1 AS(
+     SELECT i.BillingCountry Country, c.CustomerId , c.FirstName, c.LastName, SUM(i.Total) AS total_sum
+     FROM Invoice i
+     JOIN Customer c
+     ON i.CustomerId=c.CustomerId 
+     GROUP BY 1,2,3,4),
+
+     t2 AS(
+     SELECT country, MAX(total_sum) AS max_total_sum
+     FROM t1
+     GROUP BY 1)
+
+SELECT t1.FirstName, t1.LastName, t1.CustomerId || ' ' || t1.country AS customer_id_with_country, t2.max_total_sum TotalSpent
+FROM t1
+JOIN t2
+ON t1.country=t2.country AND t1.total_sum = t2.max_total_sum
+ORDER BY 4;
+
+
+__________________________________________________________________________
+
+
+/* Question 2 Query */
+
+WITH count_table AS(
+     SELECT i.BillingCountry, g.Name genre_name, g.GenreId, COUNT(*) AS count
+     FROM Genre g
+     JOIN Track t
+     ON g.GenreId=t.GenreId
+     JOIN InvoiceLine il
+     ON t.TrackId=il.TrackId
+     JOIN Invoice i
+     ON il.InvoiceId=i.InvoiceId
+     GROUP BY 1,2),
+
+     max_table AS(
+     SELECT BillingCountry, GenreId, MAX(count) AS max_purchase_count
+     FROM count_table
+     GROUP BY 1)
+
+SELECT c.GenreId, c.BillingCountry || ' (' || c.genre_name || ')' AS 'Country with most popular Genre', c.count 'Number of Purshases'
+FROM count_table c
+JOIN max_table m
+ON m.BillingCountry = c.BillingCountry AND m.max_purchase_count = c.count
+ORDER BY 3;
+
+
+__________________________________________________________________________
+
+
+/* Question 3 Query */
+
+SELECT ar.Name Artist, SUM(i.Quantity*i.UnitPrice) 'Total Earned'
+FROM Artist ar
+JOIN Album al
+ON ar.Artistid=al.ArtistId
+JOIN Track t
+ON al.AlbumId=t.AlbumId
+JOIN InvoiceLine i
+ON t.TrackId = i.TrackId
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10;
+
+
+__________________________________________________________________________
+
+
+/* Question 4 Query */
+
+SELECT ar.Name Artist, COUNT(t.Name) 'Number of Songs'
+FROM Artist ar
+JOIN Album al
+ON ar.ArtistId=al.ArtistId
+JOIN Track t
+ON al.AlbumId=t.AlbumId
+JOIN Genre g
+ON t.GenreId=g.GenreId
+WHERE g.Name = "Rock"
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10;
+
+
+__________________________________________________________________________
+
+
+/* Question 5 Query */
+
+SELECT i.CustomerId Customer, SUM(il.Quantity) 'Number of Tracks purchased'
+FROM Invoice i
+JOIN InvoiceLine il
+ON i.InvoiceId=il.InvoiceId
+JOIN Track t
+ON il.TrackId=t.TrackId
+JOIN Genre g
+ON t.GenreId=g.GenreId
+WHERE g.Name = "Rock"
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10;
+
+
+
+__________________________________________________________________________
+
+
+/* Question 6 Query */
+
+SELECT 'Customer ' || i.CustomerId CustomerId, SUM(i.total) 'Total spent'
+FROM Invoice i
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10;
+
+
+
+__________________________________________________________________________
+
+
+/* Question 7 Query */
+
+SELECT BillingCity, SUM(Total) 'Total spent'
+FROM Invoice i
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10;
+
+
+__________________________________________________________________________
+
+
+/* Question 8 Query */
+
+SELECT BillingCountry, COUNT(*) 'Number of invoices'
+FROM Invoice i
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10;
+
+
+__________________________________________________________________________
+
+
+/* Question 9 Query */
+
+WITH avg_table AS(
+     SELECT AVG(Milliseconds) milliseconds_avg, 0 AS table_id
+     FROM Track),
+
+     greater_than_avg_table AS(
+     SELECT COUNT(*) AS greater_than_avg_count, 0 AS table_id
+     FROM Track
+     WHERE Milliseconds > (SELECT milliseconds_avg FROM avg_table)),
+
+     less_than_avg_table AS(
+     SELECT COUNT(*) AS less_than_avg_count, 0 AS table_id
+     FROM Track
+     WHERE Milliseconds < (SELECT milliseconds_avg FROM avg_table))
+
+SELECT l.less_than_avg_count, g.greater_than_avg_count, a.milliseconds_avg/100 AS avg_seconds
+FROM greater_than_avg_table g
+JOIN less_than_avg_table l
+ON l.table_id = g.table_id
+JOIN avg_table a
+ON l.table_id=a.table_id;
